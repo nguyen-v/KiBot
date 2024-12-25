@@ -5,12 +5,11 @@
 # License: AGPL-3.0
 # Project: KiBot (formerly KiPlot)
 # Contributed by Nguyen Vincent (@nguyen-v)
-# Reimplementation of 
+# Reimplementation of
 # https://gitlab.com/kicad/code/kicad/-/blob/master/pcbnew/exporters/gendrill_file_writer_base.cpp
 from ..gs import GS
 import pcbnew
-import re
-from kibot.misc import VIATYPE_THROUGH, VIATYPE_BLIND_BURIED, VIATYPE_MICROVIA, W_NOVIAS
+from kibot.misc import VIATYPE_THROUGH
 
 PLATED_DICT = {True: 'NPTH',
                False: 'PTH'}
@@ -19,10 +18,12 @@ HOLE_SHAPE_DICT = {0: 'Round',
                    1: 'Slot',
                    2: 'Round + Slot'}
 
-HOLE_TYPE_DICT = {pcbnew.HOLE_ATTRIBUTE_HOLE_MECHANICAL: 'Mechanical',
-                  pcbnew.HOLE_ATTRIBUTE_HOLE_PAD: 'Pad',
-                  pcbnew.HOLE_ATTRIBUTE_HOLE_VIA_THROUGH: 'Via',
-                  pcbnew.HOLE_ATTRIBUTE_HOLE_VIA_BURIED: 'Via'}
+if not GS.ki5:
+    HOLE_TYPE_DICT = {pcbnew.HOLE_ATTRIBUTE_HOLE_MECHANICAL: 'Mechanical',
+                      pcbnew.HOLE_ATTRIBUTE_HOLE_PAD: 'Pad',
+                      pcbnew.HOLE_ATTRIBUTE_HOLE_VIA_THROUGH: 'Via',
+                      pcbnew.HOLE_ATTRIBUTE_HOLE_VIA_BURIED: 'Via'}
+
 
 def get_unique_layer_pairs():
     # Collect all vias on the board
@@ -67,16 +68,16 @@ def get_full_holes_list(merge_PTH_NPTH=True, group_slots_and_round_holes=True):
     for i, pair in enumerate(hole_sets):
         doing_npth = not merge_PTH_NPTH and (i == len(hole_sets)-1)
 
-        hole_list_layer_pair, tool_list_layer_pair = build_holes_list(pair, merge_PTH_NPTH, doing_npth, 
+        hole_list_layer_pair, tool_list_layer_pair = build_holes_list(pair, merge_PTH_NPTH, doing_npth,
                                                                       group_slots_and_round_holes)
 
         hole_list.append(hole_list_layer_pair)
         tool_list.append(tool_list_layer_pair)
-    
+
     return hole_list, tool_list, hole_sets, doing_npth
 
 
-def build_holes_list(layer_pair, merge_PTH_NPTH, generate_NPTH_list=True, 
+def build_holes_list(layer_pair, merge_PTH_NPTH, generate_NPTH_list=True,
                      group_slots_and_round_holes=True):
 
     # Buffer associated to specific layer pairs
@@ -100,10 +101,13 @@ def build_holes_list(layer_pair, merge_PTH_NPTH, generate_NPTH_list=True,
             new_hole = pcbnew.HOLE_INFO()
             new_hole.m_ItemParent = via
 
-            if layer_pair == (pcbnew.F_Cu, pcbnew.B_Cu):
-                new_hole.m_HoleAttribute = pcbnew.HOLE_ATTRIBUTE_HOLE_VIA_THROUGH
+            if GS.ki5:
+                new_hole.m_HoleAttribute = 0
             else:
-                new_hole.m_HoleAttribute = pcbnew.HOLE_ATTRIBUTE_HOLE_VIA_BURIED
+                if layer_pair == (pcbnew.F_Cu, pcbnew.B_Cu):
+                    new_hole.m_HoleAttribute = pcbnew.HOLE_ATTRIBUTE_HOLE_VIA_THROUGH
+                else:
+                    new_hole.m_HoleAttribute = pcbnew.HOLE_ATTRIBUTE_HOLE_VIA_BURIED
 
             new_hole.m_Tool_Reference = -1
             new_hole.m_Hole_Orient = pcbnew.EDA_ANGLE(0, pcbnew.DEGREES_T)
@@ -142,44 +146,62 @@ def build_holes_list(layer_pair, merge_PTH_NPTH, generate_NPTH_list=True,
 
                 new_hole.m_ItemParent = pad
                 new_hole.m_Hole_NotPlated = pad.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH
-                new_hole.m_HoleAttribute = pcbnew.HOLE_ATTRIBUTE_HOLE_MECHANICAL if new_hole.m_Hole_NotPlated else pcbnew.HOLE_ATTRIBUTE_HOLE_PAD
+                if GS.ki5:
+                    new_hole.m_HoleAttribute = 0
+                else:
+                    new_hole.m_HoleAttribute = (pcbnew.HOLE_ATTRIBUTE_HOLE_MECHANICAL if
+                                                new_hole.m_Hole_NotPlated else pcbnew.HOLE_ATTRIBUTE_HOLE_PAD)
                 new_hole.m_Tool_Reference = -1
                 new_hole.m_Hole_Orient = pad.GetOrientation()
                 new_hole.m_Hole_Diameter = min(pad.GetDrillSize().x, pad.GetDrillSize().y)
                 new_hole.m_Hole_Size = pad.GetDrillSize()
-                new_hole.m_Hole_Shape = 1 if (pad.GetDrillShape() != pcbnew.PAD_DRILL_SHAPE_CIRCLE and pad.GetDrillSize().x != pad.GetDrillSize().y) else 0
+                new_hole.m_Hole_Shape = 1 if (pad.GetDrillShape() != pcbnew.PAD_DRILL_SHAPE_CIRCLE and
+                                              pad.GetDrillSize().x != pad.GetDrillSize().y) else 0
                 new_hole.m_Hole_Pos = pad.GetPosition()
                 new_hole.m_Hole_Top_Layer = pcbnew.F_Cu
                 new_hole.m_Hole_Bottom_Layer = pcbnew.B_Cu
 
                 hole_list_layer_pair.append(new_hole)
 
-    hole_list_layer_pair.sort(key=lambda hole: (
-        hole.m_Hole_NotPlated,       # Non-plated holes come after plated holes
-        hole.m_Hole_Diameter,        # Increasing diameter
-        hole.m_HoleAttribute,        # Attribute type
-        hole.m_Hole_Pos.x,           # X position
-        hole.m_Hole_Pos.y            # Y position
-    ))
+    if GS.ki5:
+        hole_list_layer_pair.sort(key=lambda hole: (
+            hole.m_Hole_NotPlated,       # Non-plated holes come after plated holes
+            hole.m_Hole_Diameter,        # Increasing diameter
+            hole.m_Hole_Pos.x,           # X position
+            hole.m_Hole_Pos.y            # Y position
+        ))
+    else:
+        hole_list_layer_pair.sort(key=lambda hole: (
+            hole.m_Hole_NotPlated,       # Non-plated holes come after plated holes
+            hole.m_Hole_Diameter,        # Increasing diameter
+            hole.m_HoleAttribute,        # Attribute type
+            hole.m_Hole_Pos.x,           # X position
+            hole.m_Hole_Pos.y            # Y position
+        ))
 
     last_hole_diameter = -1
     last_not_plated = False
-    last_attribute = pcbnew.HOLE_ATTRIBUTE_HOLE_UNKNOWN
+    if GS.ki5:
+        last_attribute = 0
+    else:
+        last_attribute = pcbnew.HOLE_ATTRIBUTE_HOLE_UNKNOWN
+
     last_hole_shape = -1
 
     for hole in hole_list_layer_pair:
 
         if (hole.m_Hole_Diameter != last_hole_diameter or
-            hole.m_Hole_NotPlated != last_not_plated or
-            hole.m_HoleAttribute != last_attribute or
-            (not group_slots_and_round_holes and hole.m_Hole_Shape != last_hole_shape)):
+                hole.m_Hole_NotPlated != last_not_plated or
+                hole.m_HoleAttribute != last_attribute or
+                (not group_slots_and_round_holes and hole.m_Hole_Shape != last_hole_shape)):
 
             new_tool = pcbnew.DRILL_TOOL(0, False)
 
             new_tool.m_Diameter = hole.m_Hole_Diameter
             new_tool.m_Hole_NotPlated = hole.m_Hole_NotPlated
-            new_tool.m_HoleAttribute = hole.m_HoleAttribute
-            new_tool.m_Hole_Shape = hole.m_Hole_Shape # not present in original implementation
+            if not GS.ki5:
+                new_tool.m_HoleAttribute = hole.m_HoleAttribute
+            new_tool.m_Hole_Shape = hole.m_Hole_Shape  # not present in original implementation
             new_tool.m_TotalCount = 0
             new_tool.m_OvalCount = 0
 
@@ -187,7 +209,8 @@ def build_holes_list(layer_pair, merge_PTH_NPTH, generate_NPTH_list=True,
 
             last_hole_diameter = new_tool.m_Diameter
             last_not_plated = new_tool.m_Hole_NotPlated
-            last_attribute = new_tool.m_HoleAttribute
+            if not GS.ki5:
+                last_attribute = new_tool.m_HoleAttribute
             last_hole_shape = new_tool.m_Hole_Shape
 
         tool_index = len(tool_list_layer_pair)
@@ -200,9 +223,9 @@ def build_holes_list(layer_pair, merge_PTH_NPTH, generate_NPTH_list=True,
 
         if hole.m_Hole_Shape:
             tool_list_layer_pair[-1].m_OvalCount += 1
-        
+
         if (tool_list_layer_pair[-1].m_OvalCount > 0 and
-            tool_list_layer_pair[-1].m_TotalCount > tool_list_layer_pair[-1].m_OvalCount):
-            tool_list_layer_pair[-1].m_Hole_Shape = 2 # The tool is associated to both slots and round holes
+                tool_list_layer_pair[-1].m_TotalCount > tool_list_layer_pair[-1].m_OvalCount):
+            tool_list_layer_pair[-1].m_Hole_Shape = 2  # The tool is associated to both slots and round holes
 
     return hole_list_layer_pair, tool_list_layer_pair

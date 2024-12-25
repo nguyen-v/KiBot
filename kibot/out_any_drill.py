@@ -8,10 +8,12 @@ import re
 import csv
 from pcbnew import (PLOT_FORMAT_HPGL, PLOT_FORMAT_POST, PLOT_FORMAT_GERBER, PLOT_FORMAT_DXF, PLOT_FORMAT_SVG,
                     PLOT_FORMAT_PDF, wxPoint, B_Cu)
-from .kicad.drill_info import get_full_holes_list, PLATED_DICT, HOLE_SHAPE_DICT, HOLE_TYPE_DICT
+from .kicad.drill_info import get_full_holes_list, PLATED_DICT, HOLE_SHAPE_DICT
 from .optionable import Optionable
 from .out_base import VariantOptions
 from .gs import GS
+if not GS.ki5:
+    from .kicad.drill_info import HOLE_TYPE_DICT
 from .layer import Layer
 from .misc import W_NODRILL
 from .macros import macros, document  # noqa: F401
@@ -19,14 +21,23 @@ from . import log
 
 logger = log.get_logger()
 
-VALID_COLUMNS = [
-    "Count",
-    "Hole Size",
-    "Plated",
-    "Hole Shape",
-    "Drill Layer Pair",
-    "Hole Type",
-]
+if GS.ki5:
+    VALID_COLUMNS = [
+        "Count",
+        "Hole Size",
+        "Plated",
+        "Hole Shape",
+        "Drill Layer Pair",
+    ]
+else:
+    VALID_COLUMNS = [
+        "Count",
+        "Hole Size",
+        "Plated",
+        "Hole Shape",
+        "Drill Layer Pair",
+        "Hole Type",
+    ]
 
 
 class DrillMap(Optionable):
@@ -70,7 +81,7 @@ class DrillTable(Optionable):
 
 class AnyDrill(VariantOptions):
     def __init__(self):
-        # Optionsf
+        # Options
         with document:
             self.generate_drill_files = True
             """ Generate drill files. Set to False and choose map format if only map is to be generated """
@@ -352,7 +363,8 @@ class AnyDrill(VariantOptions):
                             elif col["field"] == "Drill Layer Pair":
                                 value = f'{GS.board.GetLayerName(layer_pair[0])} - {GS.board.GetLayerName(layer_pair[1])}'
                             elif col["field"] == "Hole Type":
-                                value = HOLE_TYPE_DICT[tool.m_HoleAttribute]
+                                if not GS.ki5:
+                                    value = HOLE_TYPE_DICT[tool.m_HoleAttribute]
                             else:
                                 value = ""
                             row.append(value)
