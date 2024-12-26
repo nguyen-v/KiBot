@@ -110,7 +110,7 @@ def build_holes_list(layer_pair, merge_PTH_NPTH, generate_NPTH_list=True,
                     new_hole.m_HoleAttribute = pcbnew.HOLE_ATTRIBUTE_HOLE_VIA_BURIED
 
             new_hole.m_Tool_Reference = -1
-            new_hole.m_Hole_Orient = pcbnew.EDA_ANGLE(0, pcbnew.DEGREES_T)
+            new_hole.m_Hole_Orient = GS.angle(0)
             new_hole.m_Hole_Diameter = hole_sz
             new_hole.m_Hole_NotPlated = False
             new_hole.m_Hole_Size.x = new_hole.m_Hole_Size.y = new_hole.m_Hole_Diameter

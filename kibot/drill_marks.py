@@ -3,7 +3,7 @@
 # Copyright (c) 2020-2023 Instituto Nacional de Tecnología Industrial
 # License: GPL-3.0
 # Project: KiBot (formerly KiPlot)
-from .gs import NO_DRILL_SHAPE, SMALL_DRILL_SHAPE, FULL_DRILL_SHAPE
+from .gs import FULL_DRILL_SHAPE, NO_DRILL_SHAPE, SMALL_DRILL_SHAPE
 from .out_any_layer import AnyLayerOptions
 from . import log
 
