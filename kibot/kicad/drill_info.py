@@ -171,6 +171,7 @@ def build_holes_list(layer_pair, merge_PTH_NPTH, generate_NPTH_list=True,
         hole_list_layer_pair.sort(key=lambda hole: (
             hole.m_Hole_NotPlated,       # Non-plated holes come after plated holes
             hole.m_Hole_Diameter,        # Increasing diameter
+            hole.m_Hole_Shape,           # Circles first, then slots
             hole.m_Hole_Pos.x,           # X position
             hole.m_Hole_Pos.y            # Y position
         ))
@@ -179,6 +180,7 @@ def build_holes_list(layer_pair, merge_PTH_NPTH, generate_NPTH_list=True,
             hole.m_Hole_NotPlated,       # Non-plated holes come after plated holes
             hole.m_Hole_Diameter,        # Increasing diameter
             hole.m_HoleAttribute,        # Attribute type
+            hole.m_Hole_Shape,           # Circles first, then slots
             hole.m_Hole_Pos.x,           # X position
             hole.m_Hole_Pos.y            # Y position
         ))
