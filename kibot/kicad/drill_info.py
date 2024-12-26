@@ -71,8 +71,12 @@ def get_full_holes_list(merge_PTH_NPTH=True, group_slots_and_round_holes=True):
         hole_list_layer_pair, tool_list_layer_pair = build_holes_list(pair, merge_PTH_NPTH, doing_npth,
                                                                       group_slots_and_round_holes)
 
-        hole_list.append(hole_list_layer_pair)
-        tool_list.append(tool_list_layer_pair)
+        if len(hole_list_layer_pair) > 0:
+            hole_list.append(hole_list_layer_pair)
+            tool_list.append(tool_list_layer_pair)
+        elif doing_npth:
+            doing_npth = False
+            hole_sets.pop()
 
     return hole_list, tool_list, hole_sets, doing_npth
 
