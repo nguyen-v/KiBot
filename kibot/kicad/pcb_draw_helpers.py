@@ -123,12 +123,12 @@ def draw_poly(g, points, layer, filled=False, line_w=10000):
 def get_text_width(text, w=10000, bold=False, font=None):
     nt = pcbnew.PCB_TEXT(GS.board)
     nt.SetText(text)
-    nt.SetBold(bold)
     if font:
         # segfault if overbars (~{text}) with custom fonts
         remove_overbars(nt)
         nt.SetFont(font)
     nt.SetTextWidth(w)
+    nt.SetBold(bold)
     width = nt.GetTextBox().GetWidth()
     return width
 

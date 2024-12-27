@@ -52,7 +52,7 @@ class IncTableOutputOptions(Optionable):
             """ Width of rule below header. Use 0 to eliminate it """
             self.border_width = 0.4
             """ Width of border around the table. Use 0 to eliminate it """
-            self.column_spacing = 2
+            self.column_spacing = 1
             """ Blank space (in number of characters) between columns """
             self.row_spacing = 2
             """ Space (in number of characters) between rows """
@@ -160,14 +160,20 @@ def update_table_group(g, pos_x, pos_y, width, tlayer, ops, out, csv_file, slice
     if out.invert_columns_order:
         cols.reverse()
 
-    measure_table(cols, out, font=font)
+    measure_table(cols, out, out.bold_headers, font)
 
     total_char_w = sum(c.width_char for c in cols)
     total_rel_w = sum((c.width for c in cols))
 
-    font_w = (GS.from_mm(out.force_font_width) if out.force_font_width != 0 else
-              (int(width / total_char_w) if total_char_w else 0))
-    xpos_x = int(pos_x + out.column_spacing * font_w / 2)
+    font_w = int(10000*width*cols[0].width/total_rel_w/cols[0].max_len) if total_char_w else 0
+
+    if out.force_font_width != 0:
+        width = int(width*GS.from_mm(out.force_font_width)/font_w)
+        font_w = GS.from_mm(out.force_font_width) if total_char_w else 0
+
+    col_spacing_width = get_text_width(' ', w=font_w, font=font)*out.column_spacing
+
+    xpos_x = int(pos_x + col_spacing_width / 2)
     max_row_data = 0
 
     for c in cols:
@@ -176,9 +182,9 @@ def update_table_group(g, pos_x, pos_y, width, tlayer, ops, out, csv_file, slice
         if out._text_alignment == GR_TEXT_HJUSTIFY_LEFT:
             c.xoffset = 0
         elif out._text_alignment == GR_TEXT_HJUSTIFY_RIGHT:
-            c.xoffset = int(c.w - out.column_spacing * font_w)
+            c.xoffset = int(c.w - col_spacing_width)
         elif out._text_alignment == GR_TEXT_HJUSTIFY_CENTER:
-            c.xoffset = int(c.w / 2 - out.column_spacing * font_w / 2)
+            c.xoffset = int(c.w / 2 - col_spacing_width / 2)
         xpos_x += c.w
         max_row_data = max(max_row_data, len(c.data))
 
@@ -210,19 +216,19 @@ def update_table_group(g, pos_x, pos_y, width, tlayer, ops, out, csv_file, slice
 
     for n, c in enumerate(cols):
         if n > 0:
-            vrule_x = int(c.x - out.column_spacing * font_w / 2)
+            vrule_x = int(c.x - col_spacing_width / 2)
             draw_line(g, vrule_x, pos_y, vrule_x, pos_y + table_h, tlayer, line_w=GS.from_mm(out.vertical_rule_width))
 
     draw_rect(g, pos_x, pos_y, width, table_h, tlayer, line_w=GS.from_mm(out.border_width))
 
 
-def measure_table(cols, out, font=None):
-    col_spacing_width = get_text_width('o', font=font)*out.column_spacing
+def measure_table(cols, out, bold_headers, font=None):
+    col_spacing_width = get_text_width(' ', font=font)*out.column_spacing
 
     for c in cols:
         max_data_len = max(get_text_width(d, font=font) for d in c.data) if c.data else 0
         max_data_width_char = max(len(d) for d in c.data) if c.data else 0
-        c.max_len = max(get_text_width(c.header, font=font), max_data_len) + col_spacing_width
+        c.max_len = max(get_text_width(c.header, bold=bold_headers, font=font), max_data_len) + col_spacing_width
         c.width_char = max(len(c.header), max_data_width_char) + out.column_spacing
 
     tot_len = sum(c.max_len for c in cols)

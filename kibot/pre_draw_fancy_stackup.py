@@ -195,7 +195,6 @@ def draw_mask_paste_silk(g, x, y, w, h, layer, offset, border_w=10000):
 def draw_normal_buried_via(g, x, y, w, h, tlayer, clearance, hole_size):
     draw_rect(g, int(x+clearance), y, int(w/2-clearance-hole_size/2), h, tlayer, filled=True)
     draw_rect(g, int(x+w/2+hole_size/2), y, int(w/2-clearance-hole_size/2), h, tlayer, filled=True)
-    # draw_rect(g, int(x+w-offset/2 + font_w*0.2), int(layer.y)+font_w/2, int(offset-font_w*0.4), font_w, tlayer)
 
 
 def draw_microvia(g, x, y, w, h, tlayer, clearance, via_w, hole_size, via_annular_w, copper_cnt, type):
@@ -393,23 +392,24 @@ def measure_table(ops, gerber, via_layer_pairs, stackup, font=None):
         if c.type == 'gerber' and gerber == {}:
             c.max_len = 0
 
-    col_spacing_width = get_text_width('o', font=font)*ops.column_spacing
+    col_spacing_width = get_text_width(' ', font=font)*ops.column_spacing
 
     # Compute maximum width of each column according to stackup data
     for c in ops._columns:
         for layer in stackup:
+            bold = (layer.material == "Copper")
             if c.type == 'material':
-                c.max_len = max(c.max_len, get_text_width(layer.material))
+                c.max_len = max(c.max_len, get_text_width(layer.material, bold=bold, font=font))
             elif c.type == 'layer':
-                c.max_len = max(c.max_len, get_text_width(layer.layer))
+                c.max_len = max(c.max_len, get_text_width(layer.layer, bold=bold, font=font))
             elif c.type == 'thickness':
-                c.max_len = max(c.max_len, get_text_width(layer.thickness))
+                c.max_len = max(c.max_len, get_text_width(layer.thickness, bold=bold, font=font))
             elif c.type == 'dielectric':
-                c.max_len = max(c.max_len, get_text_width(layer.dielectric))
+                c.max_len = max(c.max_len, get_text_width(layer.dielectric, bold=bold, font=font))
             elif c.type == 'layer_type':
-                c.max_len = max(c.max_len, get_text_width(layer.layer_type))
+                c.max_len = max(c.max_len, get_text_width(layer.layer_type, bold=bold, font=font))
             elif c.type == 'gerber' and gerber != {}:
-                c.max_len = max(c.max_len, get_text_width(layer.gerber))
+                c.max_len = max(c.max_len, get_text_width(layer.gerber, bold=bold, font=font))
         if (c.type == 'gerber') and (gerber == {}):
             continue
         else:
@@ -421,7 +421,7 @@ def measure_table(ops, gerber, via_layer_pairs, stackup, font=None):
             c.width_char = ops.stackup_to_text_lines_spacing + 2*ops.drawing_border_spacing
             if ops.draw_vias:
                 c.width_char += (len(via_layer_pairs)-1)*ops.via_spacing
-            c.max_len = get_text_width('o' * c.width_char)
+            c.max_len = get_text_width(' ' * c.width_char, font=font)
 
     # Compute total width of table:
     tot_len = sum(c.max_len for c in ops._columns)
@@ -429,7 +429,7 @@ def measure_table(ops, gerber, via_layer_pairs, stackup, font=None):
     # Compute the approximate number of characters per column and relative width
     for c in ops._columns:
         if c.type != 'drawing':
-            c.width_char = int(c.max_len/get_text_width('o'))
+            c.width_char = int(c.max_len/get_text_width(' ', font=font))
         c.width = c.max_len/tot_len
 
 
@@ -448,14 +448,14 @@ def update_drawing_group(g, pos_x, pos_y, width, tlayer, ops, gerber, via_layer_
     measure_table(ops, gerber, via_layer_pairs, stackup, font)
 
     # Draw the stackup
-    total_char_w = sum(c.width_char for c in ops._columns) + ops.column_spacing
+    sum(c.width_char for c in ops._columns)
     total_rel_w = sum((c.width for c in ops._columns))  # should be equal to 1
 
     # Font width must be multiplied by a correcting factor (?)
-    font_w = int(0.85*width/total_char_w)
+    font_w = int(10000*width*ops._columns[0].width/total_rel_w/ops._columns[0].max_len)
+    col_spacing_width = get_text_width(' ', w=font_w, font=font)*ops.column_spacing
 
-    # layers = len(GS.stackup)
-    xpos_x = pos_x + ops.column_spacing*font_w
+    xpos_x = int(pos_x + col_spacing_width/2)
     draw_w = 0
     draw_width_char = 0
     stack_draw_w = 0
@@ -523,7 +523,8 @@ def update_drawing_group(g, pos_x, pos_y, width, tlayer, ops, gerber, via_layer_
 
     # Draw note
     if ops.note != '':
-        draw_text(g, table_x, int(pos_y + table_h + font_w/2 + row_h), "Note: " + ops.note, font_w, font_w, tlayer, font=font)
+        draw_text(g, table_x, int(pos_y + table_h + font_w/2 + 2*font_w),
+                  "Note: " + ops.note, font_w, font_w, tlayer, font=font)
 
     if not ops.draw_stackup:
         return True
