@@ -133,6 +133,7 @@ Fixed
 -  Draw Fancy Stackup:
 
    -  Problems drawing micro vias (#749)
+   -  Confusing drawing when symmetric vias overlap
 
 Changed
 ~~~~~~~

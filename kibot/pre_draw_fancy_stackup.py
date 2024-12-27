@@ -693,7 +693,7 @@ def update_drawing(ops, parent):
 
 def compute_via_layer_pairs(ops):
     # Get the total number of copper layers in the board
-    layer_cnt = GS.board.GetCopperLayerCount()
+    last_layer = GS.board.GetCopperLayerCount() - 1
     # Initialize a list to store the unique vias and their pairs
     via_layer_pairs = []
     # Dictionary to track unique vias: Key is a tuple (via type, top layer, bottom layer), value is the via object
@@ -701,14 +701,18 @@ def compute_via_layer_pairs(ops):
 
     # Helper function to check symmetry in the stackup, considering the special case of the back layer being index 31
     def are_layers_symmetric(top1, bottom1, top2, bottom2):
+        # Make sure via 1 is "on top" of via 2
+        if top1 > top2:
+            top1, bottom1, top2, bottom2 = top2, bottom2, top1, bottom1
         # Handle the special case where the back layer index is 31
         if bottom1 == pcbnew.B_Cu:
-            bottom1 = layer_cnt - 1
+            bottom1 = last_layer
         if bottom2 == pcbnew.B_Cu:
-            bottom2 = layer_cnt - 1
+            bottom2 = last_layer
 
         # Now check if the layers are symmetric in the stackup
-        return top1 == (layer_cnt - 1 - bottom2) and bottom1 == (layer_cnt - 1 - top2)
+        # Avoid overlap
+        return top1 == (last_layer - bottom2) and bottom1 == (last_layer - top2) and bottom1 < top2
 
     # A set to track vias that have been paired, using their (type, top_layer, bottom_layer) key
     paired_vias = set()

@@ -84,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Problems when using `erc: true` or `drc: true` (#742)
 - Draw Fancy Stackup:
   - Problems drawing micro vias (#749)
+  - Confusing drawing when symmetric vias overlap
 
 ### Changed
 - Default temporal layer for internal use is now "Margin", instead of "User.9"
