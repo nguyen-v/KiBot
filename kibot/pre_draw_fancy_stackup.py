@@ -448,7 +448,6 @@ def update_drawing_group(g, pos_x, pos_y, width, tlayer, ops, gerber, via_layer_
     measure_table(ops, gerber, via_layer_pairs, stackup, font)
 
     # Draw the stackup
-    sum(c.width_char for c in ops._columns)
     total_rel_w = sum((c.width for c in ops._columns))  # should be equal to 1
 
     # Font width must be multiplied by a correcting factor (?)
