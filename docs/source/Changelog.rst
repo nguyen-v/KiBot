@@ -130,6 +130,10 @@ Fixed
 
    -  Problems when using ``erc: true`` or ``drc: true`` (#742)
 
+-  Draw Fancy Stackup:
+
+   -  Problems drawing micro vias (#749)
+
 Changed
 ~~~~~~~
 
