@@ -60,6 +60,9 @@ class IncTableOutputOptions(Optionable):
             """ [left,center,right] Text alignment in the table """
             self.invert_columns_order = False
             """ Invert column order. Useful when inverting PCB texts in PCB Print """
+            self.force_font_width = 0
+            """ Force the font width (in mm) in the table. Leave empty to compute the
+                width automatically from the group width """
         if name is not None:
             self.name = name
             self.config(parent)
@@ -162,7 +165,8 @@ def update_table_group(g, pos_x, pos_y, width, tlayer, ops, out, csv_file, slice
     total_char_w = sum(c.width_char for c in cols)
     total_rel_w = sum((c.width for c in cols))
 
-    font_w = int(width / total_char_w) if total_char_w else 0
+    font_w = (GS.from_mm(out.force_font_width) if out.force_font_width != 0 else
+              (int(width / total_char_w) if total_char_w else 0))
     xpos_x = int(pos_x + out.column_spacing * font_w / 2)
     max_row_data = 0
 
