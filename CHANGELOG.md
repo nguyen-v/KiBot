@@ -88,6 +88,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Default temporal layer for internal use is now "Margin", instead of "User.9"
+- Draw Fancy Stackup:
+  - Micro vias to look closer to real world, they only span 2 layers and they
+    must be stacked to span more layers.
 
 
 ## [1.8.2] - 2024-10-28

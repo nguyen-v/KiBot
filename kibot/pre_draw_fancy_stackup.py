@@ -199,8 +199,8 @@ def draw_normal_buried_via(g, x, y, w, h, tlayer, clearance, hole_size):
 
 
 def draw_microvia(g, x, y, w, h, tlayer, clearance, via_w, hole_size, via_annular_w, copper_cnt, type):
-    layer_cnt = GS.board.GetCopperLayerCount()
-    if type == 'MT' and copper_cnt < layer_cnt/2:
+    GS.board.GetCopperLayerCount()
+    if type == 'MT':
         left_points = []
         left_points.append((int(x+clearance), y))
         left_points.append((int(x+w/2-hole_size), y))
@@ -223,7 +223,7 @@ def draw_microvia(g, x, y, w, h, tlayer, clearance, via_w, hole_size, via_annula
         right_filler.append((int(via_annular_w+x-w/2+via_w/4), y+h))
         right_filler.append((int(via_annular_w+x), y+h))
         draw_poly(g, right_filler, tlayer, filled=True)
-    elif type == 'MB' and copper_cnt > layer_cnt/2:
+    elif type == 'MB':
         left_points = []
         left_points.append((int(x+clearance), y+h))
         left_points.append((int(x+w/2-hole_size), y+h))
@@ -246,7 +246,7 @@ def draw_microvia(g, x, y, w, h, tlayer, clearance, via_w, hole_size, via_annula
         right_filler.append((int(via_annular_w+x-w/2+via_w/4), y))
         right_filler.append((int(via_annular_w+x), y))
         draw_poly(g, right_filler, tlayer, filled=True)
-    else:
+    else:  # MS
         draw_rect(g, int(x+clearance), y, int(w-2*clearance), h, tlayer, filled=True)
 
 
@@ -562,7 +562,7 @@ def update_drawing_group(g, pos_x, pos_y, width, tlayer, ops, gerber, via_layer_
                         offset = via_annular_w
                         draw_normal_buried_via(g, x+w-offset/2, int(layer.y + font_w/2), offset, font_w, tlayer, clearance,
                                                via_hole_w)
-                    elif draw == 'MT' or draw == 'MB':  # micro-via
+                    elif draw == 'MT' or draw == 'MB' or draw == 'MS':  # micro-via
                         offset = via_annular_w
                         draw_microvia(g, x+w-offset/2, int(layer.y + font_w/2), offset, font_w, tlayer, clearance, via_w,
                                       microvia_hole_w, via_annular_w, copper_cnt, draw)
@@ -598,8 +598,11 @@ def update_drawing_group(g, pos_x, pos_y, width, tlayer, ops, gerber, via_layer_
 def create_stackup_matrix(stackup, via_layer_pairs, draw_vias):
     mat = []  # This will hold the matrix (list of lists)
     i = 0  # Track the current layer index
+    before_core = True
 
-    for _ in stackup:
+    for la in stackup:
+        if la.type == 'core':
+            before_core = False
         # Create a row with empty strings (instead of zeros or numbers)
         if draw_vias:
             mat_row = [''] * (len(via_layer_pairs) * 2 + 1)
@@ -620,21 +623,21 @@ def create_stackup_matrix(stackup, via_layer_pairs, draw_vias):
                         if via_type in [VIATYPE_THROUGH, VIATYPE_BLIND_BURIED]:
                             mat_row[2 * j + 1] = 'T'
                         elif via_type == VIATYPE_MICROVIA:
-                            mat_row[2 * j + 1] = 'MT'
+                            mat_row[2 * j + 1] = 'MT' if before_core else 'MS'
 
                     elif i > via_top_layer and i < via_bottom_layer:
                         # Middle layer of the via
                         if via_type in [VIATYPE_THROUGH, VIATYPE_BLIND_BURIED]:
                             mat_row[2 * j + 1] = 'M'
                         elif via_type == VIATYPE_MICROVIA:
-                            mat_row[2 * j + 1] = 'MM'
+                            mat_row[2 * j + 1] = 'MM' if la.type != 'copper' else ('MT' if before_core else 'MB')
 
                     elif i == via_bottom_layer:
                         # Bottom layer of the via
                         if via_type in [VIATYPE_THROUGH, VIATYPE_BLIND_BURIED]:
                             mat_row[2 * j + 1] = 'B'
                         elif via_type == VIATYPE_MICROVIA:
-                            mat_row[2 * j + 1] = 'MB'
+                            mat_row[2 * j + 1] = 'MS' if before_core else 'MB'
 
         # Move to the next layer in the stackup
         i += 1
