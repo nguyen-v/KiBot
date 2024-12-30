@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (#720)
 - Include table:
   - A mechanism to set the font, using a text box (#748)
+  - `force_font_width` to force a font width (#752)
 - PCB Print: a mechanism to filter components for a particular layer (#706)
 - Report:
   - `top_total`, `bot_total`, `total_smd`, `total_tht` and `total_all`

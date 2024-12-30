@@ -79,6 +79,7 @@ Added
 -  Include table:
 
    -  A mechanism to set the font, using a text box (#748)
+   -  ``force_font_width`` to force a font width (#752)
 
 -  PCB Print: a mechanism to filter components for a particular layer
    (#706)

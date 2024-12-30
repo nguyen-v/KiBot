@@ -8,7 +8,9 @@ IncTableOutputOptions parameters
 -  ``bold_headers`` :index:`: <pair: preflight - include_table - include_table - outputs; bold_headers>` [:ref:`boolean <boolean>`] (default: ``true``) Whether or not the headers should be in bold.
 -  ``border_width`` :index:`: <pair: preflight - include_table - include_table - outputs; border_width>` [:ref:`number <number>`] (default: ``0.4``) Width of border around the table. Use 0 to eliminate it.
 -  ``bottom_rule_width`` :index:`: <pair: preflight - include_table - include_table - outputs; bottom_rule_width>` [:ref:`number <number>`] (default: ``0.4``) Width of bottom rule (bottom of table). Use 0 to eliminate it.
--  ``column_spacing`` :index:`: <pair: preflight - include_table - include_table - outputs; column_spacing>` [:ref:`number <number>`] (default: ``2``) Blank space (in number of characters) between columns.
+-  ``column_spacing`` :index:`: <pair: preflight - include_table - include_table - outputs; column_spacing>` [:ref:`number <number>`] (default: ``3``) Blank space (in number of characters) between columns.
+-  ``force_font_width`` :index:`: <pair: preflight - include_table - include_table - outputs; force_font_width>` [:ref:`number <number>`] (default: ``0``) Force the font width (in mm) in the table. Leave empty to compute the
+   width automatically from the group width.
 -  ``has_header`` :index:`: <pair: preflight - include_table - include_table - outputs; has_header>` [:ref:`boolean <boolean>`] (default: ``true``) Plot header on the table.
 -  ``header_rule_width`` :index:`: <pair: preflight - include_table - include_table - outputs; header_rule_width>` [:ref:`number <number>`] (default: ``0.3``) Width of rule below header. Use 0 to eliminate it.
 -  ``horizontal_rule_width`` :index:`: <pair: preflight - include_table - include_table - outputs; horizontal_rule_width>` [:ref:`number <number>`] (default: ``0.1``) Width of vertical rules between rows (doesn't include header)
