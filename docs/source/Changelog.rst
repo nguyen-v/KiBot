@@ -110,6 +110,7 @@ Added
 Fixed
 ~~~~~
 
+-  Guess for 3rd party dir: not just for v6
 -  SubParts filter:
 
    -  iBoM and Schematic print didn’t take it into account (#716)

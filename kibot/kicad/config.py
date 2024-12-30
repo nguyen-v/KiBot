@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2020-2023 Salvador E. Tropea
-# Copyright (c) 2020-2023 Instituto Nacional de Tecnología Industrial
-# License: GPL-3.0
+# Copyright (c) 2020-2024 Salvador E. Tropea
+# Copyright (c) 2020-2024 Instituto Nacional de Tecnología Industrial
+# License: AGPL-3.0
 # Project: KiBot (formerly KiPlot)
 """
 KiCad configuration classes.
@@ -330,7 +330,7 @@ class KiConf(object):
         home = os.environ.get('HOME')
         if home is None:
             return None
-        return os.path.join(home, '.local', 'share', 'kicad', '6.0', '3rdparty')
+        return os.path.join(home, '.local', 'share', 'kicad', str(GS.kicad_version_major)+'.0', '3rdparty')
 
     def load_ki5_env(cfg):
         """ Environment vars from KiCad 5 configuration """

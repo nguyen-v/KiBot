@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A mechanism to paste images from outputs (#714)
 
 ### Fixed
+- Guess for 3rd party dir: not just for v6
 - SubParts filter:
   - iBoM and Schematic print didn't take it into account (#716)
   - Any output filtering by reference ignored them (#729)
