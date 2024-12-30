@@ -140,10 +140,14 @@ def update_table_group(g, pos_x, pos_y, width, tlayer, ops, out, csv_file, slice
         # Parse the header if present
         if out.has_header:
             headers = next(reader)
+            if out.is_drill:
+                cols.append(ITColumns(header='Symbol'))
             for header in headers:
                 cols.append(ITColumns(header=header))
         else:
             first_row = next(reader)
+            if out.is_drill:
+                cols.append(ITColumns())
             for _ in range(len(first_row)):
                 cols.append(ITColumns())
             for i, value in enumerate(first_row):

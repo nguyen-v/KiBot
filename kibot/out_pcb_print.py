@@ -35,12 +35,14 @@ import io
 import re
 import os
 import importlib
-from pcbnew import B_Cu, B_Mask, F_Cu, F_Mask, FromMM, IsCopperLayer, LSET, PLOT_CONTROLLER, PLOT_FORMAT_SVG, PCB_GROUP
+from pcbnew import B_Cu, B_Mask, F_Cu, F_Mask, FromMM, IsCopperLayer, LSET, PLOT_CONTROLLER, PLOT_FORMAT_SVG
 from shutil import rmtree, copy2
 import sys
 from .error import KiPlotConfigurationError
 from .fil_base import BaseFilter, apply_exclude_filter
 from .gs import GS
+if not GS.ki5:
+    from pcbnew import PCB_GROUP
 from .optionable import Optionable
 from .out_base import VariantOptions
 from .pre_base import BasePreFlight
@@ -1442,24 +1444,26 @@ class PCB_PrintOptions(VariantOptions):
         # We skip the outputs marked as is_drill in the update_table if a page has been marked with _is_drill.
         # This is because this means a repeat_layers: 'drill_pairs' has been used, so we want to update the
         # drill table separately for each layer/drill pair in the repeat_layer
-        select_output = 'all'
-        for p in self._pages:
-            if p._is_drill:
-                select_output = 'no_drill'
-                continue
+        if not GS.ki5:
+            select_output = 'all'
+            for p in self._pages:
+                if p._is_drill:
+                    select_output = 'no_drill'
+                    continue
 
-        has_drill_output = False
-        for out in self._include_table._outputs:
-            if out.is_drill:
-                has_drill_output = True
+            has_drill_output = False
+            for out in self._include_table._outputs:
+                if out.is_drill:
+                    has_drill_output = True
 
-        update_table(self._include_table, self, select_output)
-        GS.save_pcb()
+            update_table(self._include_table, self, select_output)
+            GS.save_pcb()
         # Generate the output, page by page
         pages = []
         for n, p in enumerate(self._pages):
-            g_drill_map = PCB_GROUP(GS.board)
-            self.add_drill_map_drawing(p, g_drill_map)
+            if not GS.ki5:
+                g_drill_map = PCB_GROUP(GS.board)
+                self.add_drill_map_drawing(p, g_drill_map)
             # We skipped the outputs marked as drill before, so now we draw the tables for each drill pair
             if select_output == 'no_drill' and p._is_drill and has_drill_output:
                 update_table(self._include_table, self, 'drill_only', force_index=p._drill_pair_index)
@@ -1531,8 +1535,13 @@ class PCB_PrintOptions(VariantOptions):
 #                 if needs_ki7_scale_workaround:
 #                     self.kicad7_scale_workaround(id, temp_dir, filelist[-1][0], filelist[-1][1], p.mirror, p.scaling)
             # remove the drill map drawing
-            for item in g_drill_map.GetItems():
-                GS.board.Delete(item)
+            if not GS.ki5:
+                items = g_drill_map.GetItems()
+                if not isinstance(items, list):
+                    items = list(items)
+
+                for item in items:
+                    GS.board.Delete(item)
             # 2) Plot the frame using an empty layer and 1.0 scale
             po.SetMirror(False)
             if self.plot_sheet_reference:
