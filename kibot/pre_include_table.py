@@ -52,7 +52,7 @@ class IncTableOutputOptions(Optionable):
             """ Width of rule below header. Use 0 to eliminate it """
             self.border_width = 0.4
             """ Width of border around the table. Use 0 to eliminate it """
-            self.column_spacing = 1
+            self.column_spacing = 3
             """ Blank space (in number of characters) between columns """
             self.row_spacing = 2
             """ Space (in number of characters) between rows """
