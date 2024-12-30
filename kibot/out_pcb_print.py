@@ -35,7 +35,7 @@ import io
 import re
 import os
 import importlib
-from pcbnew import B_Cu, B_Mask, F_Cu, F_Mask, FromMM, IsCopperLayer, LSET, PLOT_CONTROLLER, PLOT_FORMAT_SVG
+from pcbnew import B_Cu, B_Mask, F_Cu, F_Mask, FromMM, IsCopperLayer, LSET, PLOT_CONTROLLER, PLOT_FORMAT_SVG, PCB_GROUP
 from shutil import rmtree, copy2
 import sys
 from .error import KiPlotConfigurationError
@@ -55,6 +55,9 @@ from .misc import (PDF_PCB_PRINT, W_PDMASKFAIL, W_MISSTOOL, PCBDRAW_ERR, W_PCBDR
 from .create_pdf import create_pdf_from_pages
 from .macros import macros, document, output_class  # noqa: F401
 from .drill_marks import DRILL_MARKS_MAP, add_drill_marks
+from .kicad.drill_info import get_num_layer_pairs
+from .kicad.pcb_draw_helpers import draw_drill_map
+from .pre_include_table import IncludeTableOptions, update_table
 from .layer import Layer, get_priority
 from .kiplot import run_command, load_board, get_all_components, look_for_output, get_output_targets, run_output
 from .svgutils.transform import ImageElement, GroupElement
@@ -291,6 +294,7 @@ class PagesOptions(Optionable):
         super().config(parent)
         # Fill the ID member for all the layers
         self._layers = LayerOptions.solve(self.layers)
+        self._is_drill = False
         if self.sort_layers:
             self._layers.sort(key=lambda x: get_priority(x._id), reverse=True)
         if self.sheet_reference_color:
@@ -314,7 +318,12 @@ class PagesOptions(Optionable):
             if self._repeat_for_layer is None:
                 raise KiPlotConfigurationError("Layer `{}` specified in `repeat_for_layer` isn't valid".format(layer))
             self._repeat_for_layer_index = self._layers.index(self._repeat_for_layer)
-            self._repeat_layers = LayerOptions.solve(self.repeat_layers)
+            if self.repeat_layers != ['drill_pairs']:
+                self._repeat_layers = LayerOptions.solve(self.repeat_layers)
+            else:
+                self._is_drill = True
+                self._drill_map_layer = GS.board.GetLayerID(self.repeat_for_layer)
+                self._repeat_layers = get_num_layer_pairs()*[LayerOptions.create_layer(self.repeat_for_layer)]
             if not self.repeat_layers:
                 # Here we check the user specified something (or left the default)
                 # We don't check this "something" is usable (self._repeat_layers) because this prevents using default values
@@ -425,6 +434,8 @@ class PCB_PrintOptions(VariantOptions):
             """ Invert the meaning of the `use_for_center` layer option.
                 This can be used to just select the edge cuts for centering, in this case enable this option
                 and disable the `use_for_center` option of the edge cuts layer """
+            self.include_table = IncludeTableOptions
+            """ [boolean|dict=false] Use a boolean for simple cases or fine-tune its behavior """
         add_drill_marks(self)
         super().__init__()
         self._expand_id = 'assembly'
@@ -439,15 +450,22 @@ class PCB_PrintOptions(VariantOptions):
 
     def config(self, parent):
         super().config(parent)
+        if isinstance(self.include_table, bool):
+            self._include_table = IncludeTableOptions()
+            self._include_table.config(self)
+        else:
+            self._include_table = self.include_table
         # Expand any repeat_for_layer
         pages = []
         for page in self.pages:
             layers_for_page = self.get_layers_for_page(page)
             if page.repeat_for_layer:
-                for la in page._repeat_layers:
+                for i, la in enumerate(page._repeat_layers):
                     new_page = deepcopy(page)
                     if page.repeat_inherit:
                         la.copy_extra_from(page._repeat_for_layer)
+                    if page._is_drill:
+                        new_page._drill_pair_index = i
                     new_page._layers[page._repeat_for_layer_index] = la
                     new_page.sheet = new_page.expand_sheet_patterns(parent, page.sheet, la.layer+'+'+layers_for_page, la)
                     new_page.layer_var = new_page.expand_sheet_patterns(parent, page.layer_var, la.layer+'+'+layers_for_page,
@@ -938,6 +956,12 @@ class PCB_PrintOptions(VariantOptions):
                 # Process all text inside
                 self.search_text_for_g(e, texts)
 
+    def add_drill_map_drawing(self, p, g):
+        if p._is_drill:
+            layer = p._drill_map_layer
+            index = p._drill_pair_index
+            draw_drill_map(g, layer, index)
+
     def move_kibot_image_groups(self):
         """ Look for KiBot image groups (kibot_image_*)
             Move them to the Rescue layer
@@ -1415,9 +1439,30 @@ class PCB_PrintOptions(VariantOptions):
         self.set_visible(edge_id)
         # Move KiBot image groups away
         self.move_kibot_image_groups()
+        # We skip the outputs marked as is_drill in the update_table if a page has been marked with _is_drill.
+        # This is because this means a repeat_layers: 'drill_pairs' has been used, so we want to update the
+        # drill table separately for each layer/drill pair in the repeat_layer
+        select_output = 'all'
+        for p in self._pages:
+            if p._is_drill:
+                select_output = 'no_drill'
+                continue
+
+        has_drill_output = False
+        for out in self._include_table._outputs:
+            if out.is_drill:
+                has_drill_output = True
+
+        update_table(self._include_table, self, select_output)
+        GS.save_pcb()
         # Generate the output, page by page
         pages = []
         for n, p in enumerate(self._pages):
+            g_drill_map = PCB_GROUP(GS.board)
+            self.add_drill_map_drawing(p, g_drill_map)
+            # We skipped the outputs marked as drill before, so now we draw the tables for each drill pair
+            if select_output == 'no_drill' and p._is_drill and has_drill_output:
+                update_table(self._include_table, self, 'drill_only', force_index=p._drill_pair_index)
             # Make visible only the layers we need
             # This is very important when scaling, otherwise the results are controlled by the .kicad_prl (See #407)
             if self.individual_page_scaling:
@@ -1485,6 +1530,9 @@ class PCB_PrintOptions(VariantOptions):
                 self.restore_components_from_layer(la)
 #                 if needs_ki7_scale_workaround:
 #                     self.kicad7_scale_workaround(id, temp_dir, filelist[-1][0], filelist[-1][1], p.mirror, p.scaling)
+            # remove the drill map drawing
+            for item in g_drill_map.GetItems():
+                GS.board.Delete(item)
             # 2) Plot the frame using an empty layer and 1.0 scale
             po.SetMirror(False)
             if self.plot_sheet_reference:

@@ -24,7 +24,7 @@ logger = log.get_logger()
 ALIGNMENT = {'left': GR_TEXT_HJUSTIFY_LEFT,
              'center': GR_TEXT_HJUSTIFY_CENTER,
              'right': GR_TEXT_HJUSTIFY_RIGHT}
-VALID_OUTPUT_TYPES = {'bom', 'kibom', 'position', 'report'}
+VALID_OUTPUT_TYPES = {'bom', 'kibom', 'position', 'report', 'excellon'}
 
 
 class IncTableOutputOptions(Optionable):
@@ -63,6 +63,9 @@ class IncTableOutputOptions(Optionable):
             self.force_font_width = 0
             """ Force the font width (in mm) in the table. Leave empty to compute the
                 width automatically from the group width """
+            self.is_drill = False
+            """ Set to True if the table is a drill table. This will add drill marks
+                on the left side of the table """
         if name is not None:
             self.name = name
             self.config(parent)
@@ -238,7 +241,7 @@ def measure_table(cols, out, bold_headers, font=None):
         c.width = c.max_len/tot_len
 
 
-def update_table(ops, parent):
+def update_table(ops, parent, select_output='all', force_index=-1):
     logger.debug('Starting include table preflight')
     load_board()
     csv_files = []
@@ -249,6 +252,16 @@ def update_table(ops, parent):
     for out in ops._outputs:
         if not out.name:
             raise KiPlotConfigurationError('output entry without a name')
+
+        # Determine whether or not to skip outputs based on whether they are
+        # drill outputs or normal outputs
+        # if select_output == 'no_drill' and out.is_drill:
+        #     logger.debug(f'  - Skipping drill output: {out.name}')
+        #     continue
+        # elif select_output == 'drill_only' and not out.is_drill:
+        #     logger.debug(f'  - Skipping non-drill output: {out.name}')
+        #     continue
+
         csv = look_for_output(out.name, '`include table`', parent, VALID_OUTPUT_TYPES) if out.name else None
         if not csv:
             logger.debug(f'  - {out.name} no CSV')
@@ -286,6 +299,20 @@ def update_table(ops, parent):
 
         # Check for number of brackets in the group name
         bracket_matches = re.findall(r'\[.*?\]', group_suffix)
+        out, csv = out_to_csv_mapping.get(group_suffix.split('[')[0], (None, None))
+
+        if not csv:
+            logger.warning(W_NOMATCHGRP + f'No output to handle `{group_name}` found')
+            continue
+
+        # Determine whether or not to skip outputs based on whether they are
+        # drill outputs or normal outputs
+        if select_output == 'no_drill' and out.is_drill:
+            logger.debug(f'  - Skipping drill output: {out.name}')
+            continue
+        elif select_output == 'drill_only' and not out.is_drill:
+            logger.debug(f'  - Skipping non-drill output: {out.name}')
+            continue
 
         if len(bracket_matches) == 2:
             # Two brackets: second is slicing expression
@@ -294,7 +321,7 @@ def update_table(ops, parent):
             group_suffix = re.sub(r'\[.*?\]', '', group_suffix, count=2)  # Remove both brackets
         elif len(bracket_matches) == 1:
             # One bracket: determine if it's an index or a slice
-            if len(csv_targets) == 1:
+            if len(csv) == 1:
                 slice_str = bracket_matches[0]  # Single CSV means it must be a slice
             else:
                 index = int(bracket_matches[0][1:-1]) - 1  # Multiple CSVs mean it's an index
@@ -302,17 +329,15 @@ def update_table(ops, parent):
 
         logger.debug(f'    - Parsed group_suffix: {group_suffix}, index: {index}, slice_str: {slice_str}')
 
-        out, csv = out_to_csv_mapping.get(group_suffix, (None, None))
-        if not csv:
-            logger.warning(W_NOMATCHGRP + f'No output to handle `{group_name}` found')
-            continue
-
         # Default index to 0 if csv has only one element
         if index is None:
             index = 0
 
+        if force_index != -1:
+            index = force_index
+
         if index < 0 or index >= len(csv):
-            msg = f'Index {index + 1} is out of range, '
+            msg = f'Index {index + 1} is out of range for output {out.name}, '
             raise KiPlotConfigurationError(msg)
 
         x1, y1, x2, y2 = GS.compute_group_boundary(g)

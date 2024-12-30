@@ -66,12 +66,14 @@ class DrillTable(Optionable):
         super().__init__()
         with document:
             self.output = GS.def_global_output
-            """ Name of the drill table. Not generated unless a name is specified.
+            """ *Name of the drill table. Not generated unless a name is specified.
                 (%i='drill_table' %x='csv') """
             self.pth_and_npth_single_file = True
-            """ *Generate one file for both, plated holes and non-plated holes, instead of two separated files """
+            """ Generate one file for both, plated holes and non-plated holes, instead of two separated files """
             self.group_slots_and_round_holes = True
-            """ *By default KiCad groups slots and rounded holes if they can be cut from the same tool (same diameter) """
+            """ By default KiCad groups slots and rounded holes if they can be cut from the same tool (same diameter) """
+            self.compute_total = True
+            """ If True, add a row at the bottom that indicates the total number of holes """
             self.columns = []
             """ *[list(dict)|list(string)=?] List of columns to display.
                 Each entry can be a dictionary with `field`, `name` or just a string (field name).
@@ -139,10 +141,12 @@ class AnyDrill(VariantOptions):
             self._table_output = self.table
             self._table_pth_npth_single_file = True
             self._table_group_slots_and_round_holes = True
+            self._table_compute_total = True
         else:
             self._table_output = self.table.output
             self._table_pth_npth_single_file = self.table.pth_and_npth_single_file
             self._table_group_slots_and_round_holes = self.table.group_slots_and_round_holes
+            self._table_compute_total = self.table.compute_total
         self._expand_id = 'drill'
         self._expand_ext = self._ext
 
@@ -370,6 +374,16 @@ class AnyDrill(VariantOptions):
                             row.append(value)
                         writer.writerow(row)
 
+                    if self._table_compute_total:
+                        row = []
+                        for col in columns:
+                            if col["field"] == "Count":
+                                value = f"Total {sum(tool.m_TotalCount for tool in tools)}"
+                            else:
+                                value = ""
+                            row.append(value)
+                        writer.writerow(row)
+
         self.unfilter_pcb_components()
 
     def get_targets(self, out_dir):
@@ -389,6 +403,6 @@ class AnyDrill(VariantOptions):
                 if npth and i == len(hole_sets)-1:
                     layer_pair_name += '_NPTH'
                 targets.append(self.expand_filename(out_dir, self._table_output,
-                               f"drill_table_{layer_pair_name}", 'csv'))
+                               f'{layer_pair_name}' + '_drill_table', 'csv'))
 
         return targets
