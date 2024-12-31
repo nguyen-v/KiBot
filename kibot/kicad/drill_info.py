@@ -10,7 +10,7 @@
 from ..gs import GS
 import pcbnew
 from kibot.misc import VIATYPE_THROUGH
-from . import log
+from kibot import log
 
 logger = log.get_logger()
 
