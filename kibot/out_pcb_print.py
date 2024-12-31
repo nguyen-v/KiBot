@@ -1488,9 +1488,9 @@ class PCB_PrintOptions(VariantOptions):
             if not GS.ki5:
                 g_drill_map = PCB_GROUP(GS.board)
                 self.add_drill_map_drawing(p, g_drill_map)
-            # We skipped the outputs marked as drill before, so now we draw the tables for each drill pair
-            if select_output == 'no_drill' and p._is_drill and has_drill_output:
-                update_table(self._include_table, self, 'drill_only', force_index=p._drill_pair_index)
+                # We skipped the outputs marked as drill before, so now we draw the tables for each drill pair
+                if select_output == 'no_drill' and p._is_drill and has_drill_output:
+                    update_table(self._include_table, self, 'drill_only', force_index=p._drill_pair_index)
             # Make visible only the layers we need
             # This is very important when scaling, otherwise the results are controlled by the .kicad_prl (See #407)
             if self.individual_page_scaling:
