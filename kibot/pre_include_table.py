@@ -155,7 +155,7 @@ def update_table_group(g, pos_x, pos_y, width, tlayer, ops, out, csv_file, slice
         # Add the rest of the CSV rows to the column data
         for row in reader:
             if out.is_drill:
-                row.insert(0, '      ')  # for the drill symbol we reserve 6 em spaces
+                row.insert(0, '   ')  # for the drill symbol we reserve 6 em spaces
             for i, value in enumerate(row):
                 if i < len(cols):
                     cols[i].data.append(value)
