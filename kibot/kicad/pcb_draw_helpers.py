@@ -222,7 +222,7 @@ def draw_drill_map(g, layer, layer_pair_idx, merge_PTH_NPTH=True, group_slots_an
 
     hole_list, _, _, _ = get_full_holes_list(merge_PTH_NPTH, group_slots_and_round_holes)
 
-    if layer_pair_idx > len(hole_list):
+    if layer_pair_idx > len(hole_list)-1:
         logger.error(f"Layer pair index {layer_pair_idx} out of range ({len(hole_list)})")
 
     draw_drill_marks(g, layer, hole_list[layer_pair_idx])

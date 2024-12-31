@@ -45,6 +45,7 @@ if not GS.ki5:
     from pcbnew import PCB_GROUP
 from .optionable import Optionable
 from .out_base import VariantOptions
+from .out_any_drill import DrillOptions
 from .pre_base import BasePreFlight
 from .kicad.color_theme import load_color_theme
 from .kicad.patch_svg import patch_svg_file
@@ -57,7 +58,7 @@ from .misc import (PDF_PCB_PRINT, W_PDMASKFAIL, W_MISSTOOL, PCBDRAW_ERR, W_PCBDR
 from .create_pdf import create_pdf_from_pages
 from .macros import macros, document, output_class  # noqa: F401
 from .drill_marks import DRILL_MARKS_MAP, add_drill_marks
-from .kicad.drill_info import get_num_layer_pairs
+from .kicad.drill_info import get_num_layer_pairs, get_layer_pair_name
 from .kicad.pcb_draw_helpers import draw_drill_map
 from .pre_include_table import IncludeTableOptions, update_table
 from .layer import Layer, get_priority
@@ -225,7 +226,9 @@ class PagesOptions(Optionable):
                 Pattern (%*) and text variables are expanded.
                 The %ll is the list of layers included in this page.
                 In addition when you use `repeat_for_layer` the following patterns are available:
-                %ln layer name, %ls layer suffix and %ld layer description  """
+                %ln layer name, %ls layer suffix and %ld layer description.
+                When `repeat_layers` is `drill_pairs`, the following additional patterns are available:
+                %lnp layer name pair, %lp layer pair """
             self.layer_var = '%ll'
             """ Text to use for the `LAYER` in the title block.
                 All the expansions available for `sheet` are also available here """
@@ -273,6 +276,8 @@ class PagesOptions(Optionable):
         self._autoscale_margin_x_example = 0
         self._autoscale_margin_y_example = 0
         self._layers = None
+        self._layer_pair = "No layer pair"
+        self._layer_pair_name = "No layer pair name"
 
     def __str__(self):
         txt = self.sheet
@@ -287,6 +292,8 @@ class PagesOptions(Optionable):
     def expand_sheet_patterns(self, parent, sheet, layers, layer=None):
         sheet = sheet.replace('%ll', layers)
         if layer:
+            sheet = sheet.replace('%lpn', self._layer_pair_name)
+            sheet = sheet.replace('%lp', self._layer_pair)
             sheet = sheet.replace('%ln', layer.layer)
             sheet = sheet.replace('%ls', layer.suffix)
             sheet = sheet.replace('%ld', layer.description)
@@ -438,6 +445,8 @@ class PCB_PrintOptions(VariantOptions):
                 and disable the `use_for_center` option of the edge cuts layer """
             self.include_table = IncludeTableOptions
             """ [boolean|dict=false] Use a boolean for simple cases or fine-tune its behavior """
+            self.drill = DrillOptions
+            """ [boolean|dict=false] Use a boolean for simple cases or fine-tune its behavior """
         add_drill_marks(self)
         super().__init__()
         self._expand_id = 'assembly'
@@ -457,6 +466,13 @@ class PCB_PrintOptions(VariantOptions):
             self._include_table.config(self)
         else:
             self._include_table = self.include_table
+
+        if isinstance(self.drill, bool):
+            self._drill_pth_and_npth_single_file = True
+            self._drill_group_slots_and_round_holes = True
+        else:
+            self._drill_pth_and_npth_single_file = self.drill.pth_and_npth_single_file
+            self._drill_group_slots_and_round_holes = self.drill.group_slots_and_round_holes
         # Expand any repeat_for_layer
         pages = []
         for page in self.pages:
@@ -468,6 +484,13 @@ class PCB_PrintOptions(VariantOptions):
                         la.copy_extra_from(page._repeat_for_layer)
                     if page._is_drill:
                         new_page._drill_pair_index = i
+                        new_page._layer_pair = get_layer_pair_name(new_page._drill_pair_index, False,
+                                                                   self.drill.pth_and_npth_single_file,
+                                                                   self.drill.group_slots_and_round_holes)
+                        new_page._layer_pair_name = get_layer_pair_name(new_page._drill_pair_index, True,
+                                                                        self.drill.pth_and_npth_single_file,
+                                                                        self.drill.group_slots_and_round_holes)
+
                     new_page._layers[page._repeat_for_layer_index] = la
                     new_page.sheet = new_page.expand_sheet_patterns(parent, page.sheet, la.layer+'+'+layers_for_page, la)
                     new_page.layer_var = new_page.expand_sheet_patterns(parent, page.layer_var, la.layer+'+'+layers_for_page,
@@ -962,7 +985,8 @@ class PCB_PrintOptions(VariantOptions):
         if p._is_drill:
             layer = p._drill_map_layer
             index = p._drill_pair_index
-            draw_drill_map(g, layer, index)
+            draw_drill_map(g, layer, index, self._drill_pth_and_npth_single_file,
+                           self._drill_group_slots_and_round_holes)
 
     def move_kibot_image_groups(self):
         """ Look for KiBot image groups (kibot_image_*)
@@ -1538,7 +1562,7 @@ class PCB_PrintOptions(VariantOptions):
             if not GS.ki5:
                 items = g_drill_map.GetItems()
                 if not isinstance(items, list):
-                    items = list(items)
+                    items = list[items]
 
                 for item in items:
                     GS.board.Delete(item)

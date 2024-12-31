@@ -10,6 +10,9 @@
 from ..gs import GS
 import pcbnew
 from kibot.misc import VIATYPE_THROUGH
+from . import log
+
+logger = log.get_logger()
 
 PLATED_DICT = {True: 'NPTH',
                False: 'PTH'}
@@ -96,6 +99,33 @@ def get_full_holes_list(merge_PTH_NPTH=True, group_slots_and_round_holes=True):
             hole_sets.pop()
 
     return hole_list, tool_list, hole_sets, doing_npth
+
+
+def get_layer_pair_name(index, use_layer_names=False, merge_PTH_NPTH=True, group_slots_and_round_holes=True):
+    hole_sets = get_unique_layer_pairs()
+
+    if not merge_PTH_NPTH:
+
+        hole_sets.append((pcbnew.F_Cu, pcbnew.B_Cu))
+
+        hole_list_layer_pair, _ = build_holes_list(
+            hole_sets[-1], merge_PTH_NPTH, doing_npth=True, group_slots_and_round_holes=True
+        )
+        if len(hole_list_layer_pair) == 0:
+            hole_sets.pop()
+
+    if index > len(hole_sets)-1:
+        logger.error(f"Layer pair index {index} out of range ({len(hole_sets)})")
+
+    layer_pair = hole_sets[index]
+
+    if use_layer_names:
+        return f'{GS.board.GetLayerName(layer_pair[0])} - {GS.board.GetLayerName(layer_pair[1])}'
+    else:
+        layer_cnt = GS.board.GetCopperLayerCount()
+        top_layer = layer_pair[0] + 1
+        bot_layer = layer_pair[1] + 1 if layer_pair[1] != pcbnew.B_Cu else layer_cnt
+        return f'L{top_layer} - L{bot_layer}'
 
 
 def build_holes_list(layer_pair, merge_PTH_NPTH, generate_NPTH_list=True,

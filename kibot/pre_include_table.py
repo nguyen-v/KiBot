@@ -12,6 +12,7 @@ import pcbnew
 from .error import KiPlotConfigurationError
 from .gs import GS
 from .kicad.pcb_draw_helpers import (draw_rect, draw_line, draw_text, get_text_width,
+                                     draw_marker, get_marker_best_pen_size,
                                      GR_TEXT_HJUSTIFY_LEFT, GR_TEXT_HJUSTIFY_RIGHT,
                                      GR_TEXT_HJUSTIFY_CENTER)
 from .kiplot import load_board, get_output_targets, look_for_output
@@ -150,11 +151,11 @@ def update_table_group(g, pos_x, pos_y, width, tlayer, ops, out, csv_file, slice
                 cols.append(ITColumns())
             for _ in range(len(first_row)):
                 cols.append(ITColumns())
-            for i, value in enumerate(first_row):
-                cols[i].data.append(value)
 
         # Add the rest of the CSV rows to the column data
         for row in reader:
+            if out.is_drill:
+                row.insert(0, '      ')  # for the drill symbol we reserve 6 em spaces
             for i, value in enumerate(row):
                 if i < len(cols):
                     cols[i].data.append(value)
@@ -209,12 +210,19 @@ def update_table_group(g, pos_x, pos_y, width, tlayer, ops, out, csv_file, slice
         rule_y = int(y + (i + 1) * row_h)
         draw_line(g, pos_x, rule_y, pos_x + width, rule_y, tlayer, line_w=GS.from_mm(out.horizontal_rule_width))
 
+    if out.is_drill:
+        rule_y = int(y + (max_row_data - 1) * row_h)
+        draw_line(g, pos_x, rule_y, pos_x + width, rule_y, tlayer, line_w=GS.from_mm(out.bottom_rule_width))
+
     table_h = 0
-    for c in cols:
+    for i, c in enumerate(cols):
         row_y = int(y + row_h / 2)
-        for d in c.data:
+        for j, d in enumerate(c.data):
             txt, _ = draw_text(g, c.x + c.xoffset, int(row_y - font_w), d, font_w, font_w,
                                tlayer, alignment=out._text_alignment, font=font)
+            if out.is_drill and i == 0 and j != len(c.data)-1:
+                marker_w = get_marker_best_pen_size(font_w)
+                draw_marker(g, c.x + c.xoffset, int(row_y), font_w, tlayer, j, marker_w)
             row_y += row_h
         table_h = int(max(table_h, row_y - pos_y) - row_h / 2)
 
