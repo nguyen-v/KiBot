@@ -184,15 +184,22 @@ def update_table_group(g, pos_x, pos_y, width, tlayer, ops, out, csv_file, slice
     xpos_x = int(pos_x + col_spacing_width / 2)
     max_row_data = 0
 
+    # KiCad adds some padding around the texts, we add some padding to align
+    # markers with the texts
+    marker_padding = font_w/4
+
     for c in cols:
         c.w = int(c.width / total_rel_w * width)
         c.x = xpos_x
         if out._text_alignment == GR_TEXT_HJUSTIFY_LEFT:
             c.xoffset = 0
+            c.xoffset_marker = int(font_w/2 + marker_padding)
         elif out._text_alignment == GR_TEXT_HJUSTIFY_RIGHT:
             c.xoffset = int(c.w - col_spacing_width)
+            c.xoffset_marker = int(-font_w/2 - marker_padding)
         elif out._text_alignment == GR_TEXT_HJUSTIFY_CENTER:
             c.xoffset = int(c.w / 2 - col_spacing_width / 2)
+            c.xoffset_marker = 0
         xpos_x += c.w
         max_row_data = max(max_row_data, len(c.data))
 
@@ -222,7 +229,7 @@ def update_table_group(g, pos_x, pos_y, width, tlayer, ops, out, csv_file, slice
                                tlayer, alignment=out._text_alignment, font=font)
             if out.is_drill and i == 0 and j != len(c.data)-1:
                 marker_w = get_marker_best_pen_size(font_w)
-                draw_marker(g, c.x + c.xoffset, int(row_y), font_w, tlayer, j, marker_w)
+                draw_marker(g, int(c.x + c.xoffset + c.xoffset_marker), int(row_y), font_w, tlayer, j, marker_w)
             row_y += row_h
         table_h = int(max(table_h, row_y - pos_y) - row_h / 2)
 
