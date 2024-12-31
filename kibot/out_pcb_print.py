@@ -35,15 +35,14 @@ import io
 import re
 import os
 import importlib
-from pcbnew import (B_Cu, B_Mask, F_Cu, F_Mask, FromMM, IsCopperLayer, LSET, PLOT_CONTROLLER, PLOT_FORMAT_SVG,
-                    PCB_SHAPE)
+from pcbnew import B_Cu, B_Mask, F_Cu, F_Mask, FromMM, IsCopperLayer, LSET, PLOT_CONTROLLER, PLOT_FORMAT_SVG
 from shutil import rmtree, copy2
 import sys
 from .error import KiPlotConfigurationError
 from .fil_base import BaseFilter, apply_exclude_filter
 from .gs import GS
 if not GS.ki5:
-    from pcbnew import PCB_GROUP
+    from pcbnew import PCB_GROUP, PCB_SHAPE
 from .optionable import Optionable
 from .out_base import VariantOptions
 from .out_any_drill import DrillOptions
