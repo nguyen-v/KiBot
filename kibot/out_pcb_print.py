@@ -35,7 +35,8 @@ import io
 import re
 import os
 import importlib
-from pcbnew import B_Cu, B_Mask, F_Cu, F_Mask, FromMM, IsCopperLayer, LSET, PLOT_CONTROLLER, PLOT_FORMAT_SVG
+from pcbnew import (B_Cu, B_Mask, F_Cu, F_Mask, FromMM, IsCopperLayer, LSET, PLOT_CONTROLLER, PLOT_FORMAT_SVG,
+                    PCB_SHAPE)
 from shutil import rmtree, copy2
 import sys
 from .error import KiPlotConfigurationError
@@ -1565,7 +1566,8 @@ class PCB_PrintOptions(VariantOptions):
                     items = list[items]
 
                 for item in items:
-                    GS.board.Delete(item)
+                    if isinstance(item, PCB_SHAPE):
+                        GS.board.Delete(item)
             # 2) Plot the frame using an empty layer and 1.0 scale
             po.SetMirror(False)
             if self.plot_sheet_reference:
