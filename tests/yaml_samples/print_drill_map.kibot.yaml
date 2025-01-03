@@ -1,0 +1,24 @@
+# KiBot config file
+kibot:
+  version: 1
+
+
+outputs:
+  - name: 'print_drill_map'
+    comment: "Drill Map drawings in PNG b/w"
+    type: pcb_print
+    dir: .
+    options:
+      plot_sheet_reference: true
+      sheet_reference_layout: '${KIPRJMOD}/../../data/test_img.kicad_wks'
+      format: 'PNG'
+      drill:
+        pth_and_npth_single_file: false
+        group_slots_and_round_holes: true
+      pages:
+        - scaling: 3
+          repeat_for_layer: 'User.Drawings'
+          repeat_layers: 'drill_pairs'
+          layers:
+            - layer: 'User.Drawings'
+              color: '#000000'

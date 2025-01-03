@@ -171,6 +171,20 @@ def test_pcb_print_multizone_1(test_dir):
     ctx.clean_up()
 
 
+@pytest.mark.skipif(not context.ki7() and not context.ki8(), reason="Implemented for KiCad 7+")
+def test_pcb_print_drill_map(test_dir):
+    prj = 'drill_types'
+    ctx = context.TestContext(test_dir, prj, 'print_drill_map')
+    ctx.run()
+    ctx.compare_image(prj+'-assembly_page_01.png', diff='diff_01.png', tol=DIFF_TOL)
+    ctx.compare_image(prj+'-assembly_page_02.png', diff='diff_02.png', tol=DIFF_TOL)
+    ctx.compare_image(prj+'-assembly_page_03.png', diff='diff_03.png', tol=DIFF_TOL)
+    ctx.compare_image(prj+'-assembly_page_04.png', diff='diff_04.png', tol=DIFF_TOL)
+    ctx.compare_image(prj+'-assembly_page_05.png', diff='diff_05.png', tol=DIFF_TOL)
+    ctx.compare_image(prj+'-assembly_page_06.png', diff='diff_06.png', tol=DIFF_TOL)
+    ctx.clean_up()
+
+
 @pytest.mark.skipif(not context.ki7(), reason="Just checking with modern KiCad")
 def test_var_rename_footprint_1(test_dir):
     prj = 'var_rename_footprint'
